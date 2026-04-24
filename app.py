@@ -6,7 +6,6 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import random
 from faker import Faker
-from PIL import Image
 import os
 
 st.set_page_config(
@@ -20,6 +19,7 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
     html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+
     .main-header {
         background: linear-gradient(135deg, #1B3A6B 0%, #2C5F9E 100%);
         padding: 2rem 2.5rem; border-radius: 12px;
@@ -27,13 +27,30 @@ st.markdown("""
     }
     .main-header h1 { margin: 0; font-size: 1.9rem; font-weight: 700; }
     .main-header p  { margin: 0.4rem 0 0; opacity: 0.85; font-size: 0.9rem; }
+
     .kpi-card {
-        background: white; border-radius: 10px;
-        padding: 1.25rem 1.5rem; border-left: 5px solid;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.07); margin-bottom: 0.5rem;
+        background: white;
+        border-radius: 10px;
+        padding: 1.2rem 1rem;
+        border-left: 5px solid;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+        margin-bottom: 0.5rem;
+        min-height: 90px;
     }
-    .kpi-card .metric { font-size: 2rem; font-weight: 700; line-height: 1; }
-    .kpi-card .label  { font-size: 0.8rem; color: #666; margin-top: 0.25rem; font-weight: 500; }
+    .kpi-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        line-height: 1.1;
+        word-break: break-word;
+    }
+    .kpi-label {
+        font-size: 0.78rem;
+        color: #555;
+        margin-top: 0.3rem;
+        font-weight: 500;
+        line-height: 1.3;
+    }
+
     .section-title {
         font-size: 1rem; font-weight: 600; color: #1B3A6B;
         border-bottom: 2px solid #C9A84C;
@@ -80,17 +97,17 @@ def generate_data():
         "Outside Business Activity":   {"severity": "LOW",      "rule": "FINRA Rule 3270", "escalate": False, "review_days": 10},
         "Financial - Unsatisfied":     {"severity": "LOW",      "rule": "SEC Rule 17a-3",  "escalate": False, "review_days": 10},
     }
-    DEPARTMENTS    = ["Retail Brokerage","Institutional Sales","Investment Banking",
-                      "Wealth Management","Compliance","Operations","Research","Trading"]
-    REVIEW_STATUSES = ["PENDING","UNDER REVIEW","ESCALATED","CLEARED","REJECTED"]
-    REVIEWERS       = ["J. Thompson","M. Patel","S. Williams","A. Garcia","R. Chen"]
+    DEPARTMENTS     = ["Retail Brokerage", "Institutional Sales", "Investment Banking",
+                       "Wealth Management", "Compliance", "Operations", "Research", "Trading"]
+    REVIEW_STATUSES = ["PENDING", "UNDER REVIEW", "ESCALATED", "CLEARED", "REJECTED"]
+    REVIEWERS       = ["J. Thompson", "M. Patel", "S. Williams", "A. Garcia", "R. Chen"]
 
     records = []
     for i in range(1, 321):
         category = random.choice(list(DISCLOSURE_CATEGORIES.keys()))
         meta     = DISCLOSURE_CATEGORIES[category]
-        report_date  = fake.date_between(start_date="-2y", end_date="today")
-        event_date   = report_date - timedelta(days=random.randint(1, 180))
+        report_date     = fake.date_between(start_date="-2y", end_date="today")
+        event_date      = report_date - timedelta(days=random.randint(1, 180))
         filing_deadline = event_date + timedelta(days=30)
         days_to_file    = (report_date - event_date).days
         filed_on_time   = "Yes" if days_to_file <= 30 else "No"
@@ -104,13 +121,14 @@ def generate_data():
         else:
             ow = [20, 15, 5, 55, 5]
 
-        dollar_amt = random.randint(5000, 2500000) if ("Financial" in category or
-                     "Customer Complaint - Awards" in category) else 0
+        dollar_amt  = random.randint(5000, 2500000) if (
+            "Financial" in category or "Customer Complaint - Awards" in category
+        ) else 0
         actual_days = random.randint(meta["review_days"] - 1, meta["review_days"] + 8)
 
         records.append({
             "Record_ID":           f"DR-{i:04d}",
-            "Employee_ID":         f"EMP-{random.randint(1,200):04d}",
+            "Employee_ID":         f"EMP-{random.randint(1, 200):04d}",
             "Full_Name":           f"{fake.first_name()} {fake.last_name()}",
             "Department":          random.choice(DEPARTMENTS),
             "Disclosure_Category": category,
@@ -129,6 +147,7 @@ def generate_data():
             "Actual_Review_Days":  actual_days,
             "SLA_Breached":        "Yes" if actual_days > meta["review_days"] else "No",
         })
+
     return pd.DataFrame(records), TODAY
 
 df, TODAY = generate_data()
@@ -139,7 +158,7 @@ with st.sidebar:
     st.markdown(f"*As of {TODAY.strftime('%b %d, %Y')}*")
     st.divider()
     st.markdown("**Filter Records**")
-    sev_opts  = ["All"] + ["CRITICAL","HIGH","MEDIUM","LOW"]
+    sev_opts  = ["All"] + ["CRITICAL", "HIGH", "MEDIUM", "LOW"]
     sel_sev   = st.selectbox("Severity", sev_opts)
     dept_opts = ["All"] + sorted(df["Department"].unique().tolist())
     sel_dept  = st.selectbox("Department", dept_opts)
@@ -154,9 +173,9 @@ with st.sidebar:
 
 # ── Filter Logic ──────────────────────────────────────────────────────────────
 fdf = df.copy()
-if sel_sev  != "All": fdf = fdf[fdf["Severity"]         == sel_sev]
-if sel_dept != "All": fdf = fdf[fdf["Department"]        == sel_dept]
-if sel_rule != "All": fdf = fdf[fdf["Governing_Rule"]    == sel_rule]
+if sel_sev  != "All": fdf = fdf[fdf["Severity"]           == sel_sev]
+if sel_dept != "All": fdf = fdf[fdf["Department"]          == sel_dept]
+if sel_rule != "All": fdf = fdf[fdf["Governing_Rule"]      == sel_rule]
 if show_esc:          fdf = fdf[fdf["Requires_Escalation"] == "Yes"]
 if show_late:         fdf = fdf[fdf["Filed_On_Time"]       == "No"]
 if show_sla:          fdf = fdf[fdf["SLA_Breached"]        == "Yes"]
@@ -165,11 +184,12 @@ if show_sla:          fdf = fdf[fdf["SLA_Breached"]        == "Yes"]
 st.markdown("""
 <div class="main-header">
     <h1>Regulatory Disclosure Review Framework</h1>
-    <p>FINRA Rule 4530 &nbsp;|&nbsp; SEC Rule 17a-3 &nbsp;|&nbsp; BrokerCheck Disclosure Analytics &nbsp;|&nbsp; 320 Simulated Records</p>
+    <p>FINRA Rule 4530 &nbsp;|&nbsp; SEC Rule 17a-3 &nbsp;|&nbsp;
+       BrokerCheck Disclosure Analytics &nbsp;|&nbsp; 320 Simulated Records</p>
 </div>
 """, unsafe_allow_html=True)
 
-# ── KPIs ──────────────────────────────────────────────────────────────────────
+# ── KPI Row ───────────────────────────────────────────────────────────────────
 total      = len(df)
 critical_n = len(df[df["Severity"] == "CRITICAL"])
 esc_n      = len(df[df["Requires_Escalation"] == "Yes"])
@@ -177,21 +197,24 @@ late_n     = len(df[df["Filed_On_Time"] == "No"])
 timely_r   = round(len(df[df["Filed_On_Time"] == "Yes"]) / total * 100, 1)
 sla_n      = len(df[df["SLA_Breached"] == "Yes"])
 
-k1,k2,k3,k4,k5,k6 = st.columns(6)
-for col, val, label, color in [
-    (k1, total,          "Total Records",        "#1B3A6B"),
-    (k2, critical_n,     "Critical Severity",    "#C0392B"),
-    (k3, esc_n,          "Require Escalation",   "#E67E22"),
-    (k4, late_n,         "Late Filings",         "#922B21"),
-    (k5, f"{timely_r}%", "Timeliness Rate",      "#27AE60"),
-    (k6, sla_n,          "SLA Breached",         "#8E44AD"),
-]:
+kpi_items = [
+    (total,          "Total Records",       "#1B3A6B"),
+    (critical_n,     "Critical Severity",   "#C0392B"),
+    (esc_n,          "Require Escalation",  "#E67E22"),
+    (late_n,         "Late Filings",        "#922B21"),
+    (f"{timely_r}%", "Timeliness Rate",     "#27AE60"),
+    (sla_n,          "SLA Breached",        "#8E44AD"),
+]
+
+cols = st.columns(6)
+for col, (val, label, color) in zip(cols, kpi_items):
     with col:
         st.markdown(f"""
         <div class="kpi-card" style="border-color:{color}">
-            <div class="metric" style="color:{color}">{val}</div>
-            <div class="label">{label}</div>
-        </div>""", unsafe_allow_html=True)
+            <div class="kpi-value" style="color:{color}">{val}</div>
+            <div class="kpi-label">{label}</div>
+        </div>
+        """, unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -200,22 +223,31 @@ col_a, col_b = st.columns([1, 2])
 
 with col_a:
     st.markdown('<div class="section-title">Severity Distribution</div>', unsafe_allow_html=True)
-    sc = df["Severity"].value_counts().reindex(["CRITICAL","HIGH","MEDIUM","LOW"]).reset_index()
-    sc.columns = ["Severity","Count"]
+    sc = (df["Severity"]
+          .value_counts()
+          .reindex(["CRITICAL", "HIGH", "MEDIUM", "LOW"])
+          .reset_index())
+    sc.columns = ["Severity", "Count"]
     fig1 = px.pie(sc, values="Count", names="Severity",
                   color="Severity", color_discrete_map=SEV_COLORS, hole=0.55)
     fig1.update_traces(textposition="outside", textinfo="percent+label", textfont_size=10)
-    fig1.update_layout(showlegend=False, margin=dict(t=10,b=10,l=10,r=10), height=300)
+    fig1.update_layout(showlegend=False, margin=dict(t=10, b=10, l=10, r=10), height=300)
     st.plotly_chart(fig1, use_container_width=True)
 
 with col_b:
-    st.markdown('<div class="section-title">Disclosures by Category & Severity</div>', unsafe_allow_html=True)
-    cat_df = df.groupby(["Disclosure_Category","Severity"]).size().reset_index(name="Count")
-    fig2 = px.bar(cat_df, x="Count", y="Disclosure_Category", color="Severity",
-                  color_discrete_map=SEV_COLORS, orientation="h", barmode="stack")
-    fig2.update_layout(height=300, margin=dict(t=10,b=10,l=10,r=10),
-                       legend_title="Severity", yaxis_title="",
-                       plot_bgcolor="#F7F9FC", paper_bgcolor="white")
+    st.markdown('<div class="section-title">Disclosures by Category and Severity</div>', unsafe_allow_html=True)
+    cat_df = (df.groupby(["Disclosure_Category", "Severity"])
+                .size().reset_index(name="Count"))
+    fig2 = px.bar(
+        cat_df, x="Count", y="Disclosure_Category",
+        color="Severity", color_discrete_map=SEV_COLORS,
+        orientation="h", barmode="stack"
+    )
+    fig2.update_layout(
+        height=300, margin=dict(t=10, b=10, l=10, r=10),
+        legend_title="Severity", yaxis_title="",
+        plot_bgcolor="#F7F9FC", paper_bgcolor="white"
+    )
     st.plotly_chart(fig2, use_container_width=True)
 
 # ── Charts Row 2 ──────────────────────────────────────────────────────────────
@@ -223,93 +255,145 @@ col_c, col_d = st.columns([2, 1])
 
 with col_c:
     st.markdown('<div class="section-title">Department Risk Heatmap</div>', unsafe_allow_html=True)
-    pivot = (df.groupby(["Department","Severity"])
+    pivot = (df.groupby(["Department", "Severity"])
                .size().unstack(fill_value=0)
-               .reindex(columns=["CRITICAL","HIGH","MEDIUM","LOW"], fill_value=0))
-    fig3 = px.imshow(pivot, color_continuous_scale="YlOrRd",
-                     labels=dict(color="Records"), aspect="auto", text_auto=True)
-    fig3.update_layout(height=300, margin=dict(t=10,b=10,l=10,r=10))
+               .reindex(columns=["CRITICAL", "HIGH", "MEDIUM", "LOW"], fill_value=0))
+    fig3 = px.imshow(
+        pivot, color_continuous_scale="YlOrRd",
+        labels=dict(color="Records"), aspect="auto", text_auto=True
+    )
+    fig3.update_layout(height=300, margin=dict(t=10, b=10, l=10, r=10))
     st.plotly_chart(fig3, use_container_width=True)
 
 with col_d:
-    st.markdown('<div class="section-title">Filing Timeliness (FINRA Rule 4530)</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Filing Timeliness — FINRA Rule 4530</div>', unsafe_allow_html=True)
     tdf = df["Filed_On_Time"].value_counts().reset_index()
-    tdf.columns = ["Filed_On_Time","Count"]
-    tdf["Color"] = tdf["Filed_On_Time"].map({"Yes":"#27AE60","No":"#C0392B"})
-    fig4 = px.bar(tdf, x="Filed_On_Time", y="Count",
-                  color="Filed_On_Time",
-                  color_discrete_map={"Yes":"#27AE60","No":"#C0392B"},
-                  text="Count")
-    fig4.update_layout(showlegend=False, height=300,
-                       margin=dict(t=10,b=10,l=10,r=10),
-                       plot_bgcolor="#F7F9FC", paper_bgcolor="white",
-                       xaxis_title="Filed On Time", yaxis_title="Records")
+    tdf.columns = ["Filed_On_Time", "Count"]
+    fig4 = px.bar(
+        tdf, x="Filed_On_Time", y="Count",
+        color="Filed_On_Time",
+        color_discrete_map={"Yes": "#27AE60", "No": "#C0392B"},
+        text="Count"
+    )
+    fig4.update_layout(
+        showlegend=False, height=300,
+        margin=dict(t=10, b=10, l=10, r=10),
+        plot_bgcolor="#F7F9FC", paper_bgcolor="white",
+        xaxis_title="Filed On Time", yaxis_title="Records"
+    )
     fig4.update_traces(textposition="outside")
     st.plotly_chart(fig4, use_container_width=True)
 
 # ── Tabs ──────────────────────────────────────────────────────────────────────
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "Action Required", "Full Register", "Decision Tree", "Review Checklist", "Regulatory Guide"
+    "Action Required",
+    "Full Register",
+    "Decision Tree",
+    "Review Checklist",
+    "Regulatory Guide",
 ])
 
-display_cols = ["Record_ID","Full_Name","Department","Disclosure_Category",
-                "Severity","Governing_Rule","Requires_Escalation",
-                "Filed_On_Time","Review_Status","SLA_Breached","Days_To_File"]
+display_cols = [
+    "Record_ID", "Full_Name", "Department", "Disclosure_Category",
+    "Severity", "Governing_Rule", "Requires_Escalation",
+    "Filed_On_Time", "Review_Status", "SLA_Breached", "Days_To_File"
+]
 
 def color_sev(val):
     m = {
-        "CRITICAL": "background-color:#fde8e8;color:#C0392B;font-weight:600",
-        "HIGH":     "background-color:#fef0e6;color:#E67E22;font-weight:600",
-        "MEDIUM":   "background-color:#fef9e7;color:#d68910;font-weight:600",
-        "LOW":      "background-color:#eafaf1;color:#1E8449;font-weight:600",
-        "Yes":      "background-color:#fde8e8;color:#C0392B;font-weight:600",
-        "No":       "background-color:#eafaf1;color:#1E8449;font-weight:600",
+        "CRITICAL":    "background-color:#fde8e8; color:#C0392B; font-weight:600",
+        "HIGH":        "background-color:#fef0e6; color:#E67E22; font-weight:600",
+        "MEDIUM":      "background-color:#fef9e7; color:#d68910; font-weight:600",
+        "LOW":         "background-color:#eafaf1; color:#1E8449; font-weight:600",
+        "Yes":         "background-color:#fde8e8; color:#C0392B; font-weight:600",
+        "No":          "background-color:#eafaf1; color:#1E8449; font-weight:600",
+        "PENDING":     "background-color:#fef0e6; color:#E67E22; font-weight:600",
+        "ESCALATED":   "background-color:#fde8e8; color:#C0392B; font-weight:600",
+        "CLEARED":     "background-color:#eafaf1; color:#1E8449; font-weight:600",
+        "REJECTED":    "background-color:#fde8e8; color:#C0392B; font-weight:600",
+        "UNDER REVIEW":"background-color:#eaf4fb; color:#1A5276; font-weight:600",
     }
     return m.get(val, "")
 
 with tab1:
-    st.markdown('<div class="section-title">Records Requiring Immediate Action</div>', unsafe_allow_html=True)
-    action = fdf[fdf["Severity"].isin(["CRITICAL","HIGH"]) |
-                 (fdf["Requires_Escalation"] == "Yes") |
-                 (fdf["Filed_On_Time"] == "No")].sort_values("Severity")
+    st.markdown('<div class="section-title">Records Requiring Immediate Action</div>',
+                unsafe_allow_html=True)
+    action = fdf[
+        fdf["Severity"].isin(["CRITICAL", "HIGH"]) |
+        (fdf["Requires_Escalation"] == "Yes") |
+        (fdf["Filed_On_Time"] == "No")
+    ].sort_values("Severity")
     st.warning(f"{len(action)} records flagged for immediate attention.")
     styled = (action[display_cols].style
-              .map(color_sev, subset=["Severity","Requires_Escalation",
-                                      "Filed_On_Time","SLA_Breached"]))
-    st.dataframe(styled, use_container_width=True, height=400)
+              .map(color_sev, subset=["Severity", "Requires_Escalation",
+                                      "Filed_On_Time", "SLA_Breached", "Review_Status"]))
+    st.dataframe(styled, use_container_width=True, height=420)
 
 with tab2:
-    st.markdown('<div class="section-title">Full Disclosure Register</div>', unsafe_allow_html=True)
-    styled2 = fdf[display_cols].style.map(color_sev, subset=["Severity"])
-    st.dataframe(styled2, use_container_width=True, height=450)
+    st.markdown('<div class="section-title">Full Disclosure Register</div>',
+                unsafe_allow_html=True)
+    styled2 = (fdf[display_cols].style
+               .map(color_sev, subset=["Severity", "Review_Status",
+                                       "Filed_On_Time", "SLA_Breached"]))
+    st.dataframe(styled2, use_container_width=True, height=470)
 
 with tab3:
-    st.markdown('<div class="section-title">Disclosure Severity Decision Tree</div>', unsafe_allow_html=True)
-    tree_path = os.path.join(os.path.dirname(__file__), "reports", "decision_tree.png")
+    st.markdown('<div class="section-title">Disclosure Severity Decision Tree</div>',
+                unsafe_allow_html=True)
+
+    tree_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "reports", "decision_tree.png")
     if os.path.exists(tree_path):
-        img = Image.open(tree_path)
-        st.image(img, use_column_width=True)
+        st.image(tree_path, use_column_width=True)
     else:
-        st.info("Decision tree image not found. Run Jupyter Cell 5 to generate it.")
-    st.markdown("""
-    **Text-Based Logic Summary:**
-    - **CRITICAL** (Criminal, Regulatory Actions) → Escalate to CCO within 24 hours, file U4 amendment
-    - **HIGH** (Civil, Complaints, Investigations) → Escalate to Legal within 48 hours, notify supervisor
-    - **MEDIUM** (Financial, Employment) → Standard 5-day SLA review, document findings
-    - **LOW** (OBA, Minor Financial) → Routine 10-day SLA review, file if required
-    - **Late Filing Detected** → Log Rule 4530 violation, notify Regulatory Affairs immediately
-    - **All records** → Retain minimum 6 years per SEC Rule 17a-4
-    """)
+        st.info("Decision tree image not found. Run Jupyter Cell 5 to generate it, then re-upload to GitHub.")
+
+    st.markdown("---")
+    st.markdown("**Text-Based Decision Logic**")
+
+    logic = {
+        "CRITICAL — Criminal / Regulatory Actions": "Escalate to CCO within 24 hours. File U4 amendment. Engage outside counsel if required.",
+        "HIGH — Civil Actions / Complaints / Investigations": "Escalate to Legal within 48 hours. Notify direct supervisor. Begin substantive review immediately.",
+        "MEDIUM — Financial / Employment Matters": "Assign to compliance reviewer. Complete within 5-day SLA. Document all findings.",
+        "LOW — OBA / Minor Financial": "Routine review within 10-day SLA. File regulatory notice if required. Retain documentation.",
+        "Late Filing Detected": "Log Rule 4530 timeliness violation. Notify Regulatory Affairs. Assess whether voluntary disclosure to FINRA is warranted.",
+        "All Records — Recordkeeping": "Retain all disclosure records and supporting documentation for a minimum of 6 years per SEC Rule 17a-4.",
+    }
+
+    sev_badge_colors = {
+        "CRITICAL — Criminal / Regulatory Actions":           "#C0392B",
+        "HIGH — Civil Actions / Complaints / Investigations": "#E67E22",
+        "MEDIUM — Financial / Employment Matters":            "#d68910",
+        "LOW — OBA / Minor Financial":                        "#27AE60",
+        "Late Filing Detected":                               "#922B21",
+        "All Records — Recordkeeping":                        "#1B3A6B",
+    }
+
+    for label, action_text in logic.items():
+        color = sev_badge_colors[label]
+        st.markdown(f"""
+        <div style="display:flex; align-items:flex-start; margin-bottom:0.6rem;
+                    background:white; border-radius:8px; padding:0.8rem 1rem;
+                    box-shadow:0 1px 4px rgba(0,0,0,0.07); border-left:4px solid {color}">
+            <div>
+                <div style="font-weight:600; color:{color}; font-size:0.88rem;">{label}</div>
+                <div style="color:#444; font-size:0.83rem; margin-top:0.2rem;">{action_text}</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
 with tab4:
-    st.markdown('<div class="section-title">Standard Disclosure Review Checklist</div>', unsafe_allow_html=True)
-    checklist = {
+    st.markdown('<div class="section-title">Standard Disclosure Review Checklist</div>',
+                unsafe_allow_html=True)
+    checklist = pd.DataFrame({
         "Step": list(range(1, 16)),
         "Stage": [
-            "Receipt","Receipt","Receipt","Categorization","Categorization",
-            "Severity Assessment","Severity Assessment","Filing Check","Filing Check",
-            "Substantive Review","Substantive Review","Substantive Review",
-            "Disposition","Disposition","Recordkeeping"
+            "Receipt", "Receipt", "Receipt",
+            "Categorization", "Categorization",
+            "Severity Assessment", "Severity Assessment",
+            "Filing Check", "Filing Check",
+            "Substantive Review", "Substantive Review", "Substantive Review",
+            "Disposition", "Disposition",
+            "Recordkeeping"
         ],
         "Action Item": [
             "Log disclosure in compliance tracking system with date received",
@@ -329,77 +413,77 @@ with tab4:
             "Retain all records minimum 6 years per SEC Rule 17a-4"
         ],
         "Governing Rule": [
-            "FINRA Rule 4530","FINRA Rule 4530","FINRA Rule 4530",
-            "BrokerCheck","FINRA Rule 4530",
-            "Internal Policy","Internal Policy",
-            "FINRA Rule 4530","FINRA Rule 4530",
-            "FINRA Rule 4530","Internal SLA","FINRA Rule 4530",
-            "Internal Policy","FINRA Form U4","SEC Rule 17a-4"
+            "FINRA Rule 4530", "FINRA Rule 4530", "FINRA Rule 4530",
+            "BrokerCheck", "FINRA Rule 4530",
+            "Internal Policy", "Internal Policy",
+            "FINRA Rule 4530", "FINRA Rule 4530",
+            "FINRA Rule 4530", "Internal SLA", "FINRA Rule 4530",
+            "Internal Policy", "FINRA Form U4", "SEC Rule 17a-4"
         ],
         "SLA": [
-            "Same day","Same day","Same day",
-            "1 business day","1 business day",
-            "1 business day","1 business day",
-            "1 business day","1 business day",
-            "1-10 days (by severity)","1-10 days","2 business days",
-            "Per SLA","30 days from event","Ongoing"
+            "Same day", "Same day", "Same day",
+            "1 business day", "1 business day",
+            "1 business day", "1 business day",
+            "1 business day", "1 business day",
+            "1-10 days (by severity)", "1-10 days", "2 business days",
+            "Per SLA", "30 days from event", "Ongoing"
         ],
-    }
-    st.dataframe(pd.DataFrame(checklist), use_container_width=True, height=500)
+    })
+    st.dataframe(checklist, use_container_width=True, height=530)
 
 with tab5:
-    st.markdown('<div class="section-title">Plain-English Regulatory Reference Guide</div>', unsafe_allow_html=True)
-    st.markdown("""
-    <div class="rule-card">
-        <h4>FINRA Rule 4530 — Reporting Requirements</h4>
-        <p>Firms must report to FINRA within 30 calendar days when a registered person is
-        charged with or convicted of any felony, or certain misdemeanors. Firms must also report
-        written customer complaints alleging theft or misappropriation, or sales practice
-        violations involving more than $5,000. Internal conclusions that a registered person
-        violated FINRA rules or securities laws must also be reported.</p>
-    </div>
-    <div class="rule-card">
-        <h4>SEC Rule 17a-3 — Records to Be Made</h4>
-        <p>Broker-dealers must create and maintain records on each associated person including
-        employment history, a record of any disciplinary actions, and information on any
-        financial matters such as bankruptcies, judgments, or liens. These records form the
-        foundation for BrokerCheck public disclosures and must be updated promptly when
-        information changes.</p>
-    </div>
-    <div class="rule-card">
-        <h4>FINRA Rule 3270 — Outside Business Activities</h4>
-        <p>Registered persons must provide prior written notice to their member firm before
-        engaging in any outside business activity for compensation. The firm must evaluate
-        whether the activity conflicts with the individual's role or creates regulatory risk,
-        and must retain records of all OBA notifications and firm responses.</p>
-    </div>
-    <div class="rule-card">
-        <h4>SEC Rule 17a-4 — Record Retention</h4>
-        <p>All required records must be retained for a minimum of 6 years, with the first
-        2 years in an easily accessible location. Records must be stored in a non-rewriteable,
-        non-erasable format (WORM). Failure to maintain records in the required format can
-        result in significant regulatory sanctions.</p>
-    </div>
-    <div class="rule-card">
-        <h4>BrokerCheck Disclosure Categories</h4>
-        <p>FINRA BrokerCheck organizes disclosures into: Criminal (felony/misdemeanor),
-        Regulatory Actions (FINRA/SEC/state), Civil Judicial Actions, Customer Complaints
-        and Arbitrations, Employment Separations, Financial Matters (bankruptcy/liens),
-        and Investigations. Each category carries different reporting thresholds,
-        filing deadlines, and materiality standards that compliance staff must apply
-        consistently across all registered individuals.</p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Plain-English Regulatory Reference Guide</div>',
+                unsafe_allow_html=True)
 
-# ── Search ────────────────────────────────────────────────────────────────────
+    rules = [
+        ("FINRA Rule 4530 — Reporting Requirements",
+         "Firms must report to FINRA within 30 calendar days when a registered person is charged with "
+         "or convicted of any felony, or certain misdemeanors. Firms must also report written customer "
+         "complaints alleging theft or misappropriation, or sales practice violations involving more than "
+         "$5,000. Internal conclusions that a registered person violated FINRA rules or securities laws "
+         "must also be reported promptly."),
+        ("SEC Rule 17a-3 — Records to Be Made",
+         "Broker-dealers must create and maintain records on each associated person including employment "
+         "history, a record of any disciplinary actions, and information on any financial matters such as "
+         "bankruptcies, judgments, or liens. These records form the foundation for BrokerCheck public "
+         "disclosures and must be updated promptly when information changes."),
+        ("FINRA Rule 3270 — Outside Business Activities",
+         "Registered persons must provide prior written notice to their member firm before engaging in any "
+         "outside business activity for compensation. The firm must evaluate whether the activity conflicts "
+         "with the individual's role or creates regulatory risk, and must retain records of all OBA "
+         "notifications and firm responses."),
+        ("SEC Rule 17a-4 — Record Retention",
+         "All required records must be retained for a minimum of 6 years, with the first 2 years in an "
+         "easily accessible location. Records must be stored in a non-rewriteable, non-erasable format "
+         "(WORM). Failure to maintain records in the required format can result in significant regulatory "
+         "sanctions and enforcement actions."),
+        ("BrokerCheck Disclosure Categories",
+         "FINRA BrokerCheck organizes disclosures into: Criminal (felony/misdemeanor), Regulatory Actions "
+         "(FINRA/SEC/state), Civil Judicial Actions, Customer Complaints and Arbitrations, Employment "
+         "Separations, Financial Matters (bankruptcy/liens), and Investigations. Each category carries "
+         "different reporting thresholds, filing deadlines, and materiality standards that compliance "
+         "staff must apply consistently across all registered individuals."),
+    ]
+
+    for title, body in rules:
+        st.markdown(f"""
+        <div class="rule-card">
+            <h4>{title}</h4>
+            <p>{body}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+# ── Record Lookup ─────────────────────────────────────────────────────────────
 st.markdown('<div class="section-title">Record Lookup</div>', unsafe_allow_html=True)
-search = st.text_input("Search by name, Employee ID, or Record ID",
-                       placeholder="e.g. Smith or DR-0042 or EMP-0100")
+search = st.text_input(
+    "Search by name, Employee ID, or Record ID",
+    placeholder="e.g. Smith or DR-0042 or EMP-0100"
+)
 if search:
     result = df[
-        df["Full_Name"].str.contains(search, case=False) |
-        df["Employee_ID"].str.contains(search, case=False) |
-        df["Record_ID"].str.contains(search, case=False)
+        df["Full_Name"].str.contains(search, case=False, na=False) |
+        df["Employee_ID"].str.contains(search, case=False, na=False) |
+        df["Record_ID"].str.contains(search, case=False, na=False)
     ]
     if len(result):
         st.dataframe(result[display_cols], use_container_width=True)
@@ -409,10 +493,10 @@ if search:
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.divider()
 st.markdown(f"""
-<div style="text-align:center;color:#888;font-size:0.8rem;padding:0.5rem 0">
+<div style="text-align:center; color:#888; font-size:0.8rem; padding:0.5rem 0">
     Regulatory Disclosure Review Framework &nbsp;|&nbsp;
     Simulated FINRA BrokerCheck Data &nbsp;|&nbsp;
-    FINRA Rules 4530 & 3270 | SEC Rule 17a-3 &nbsp;|&nbsp;
+    FINRA Rules 4530 and 3270 &nbsp;|&nbsp; SEC Rule 17a-3 &nbsp;|&nbsp;
     Built with Python and Streamlit
 </div>
 """, unsafe_allow_html=True)
